@@ -19,7 +19,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      # Required for npm provenance attestation.
+      # Lets the runner mint the OIDC token npm exchanges for a publish
+      # credential. Trusted publishing does not work without it.
       id-token: write
 
     steps:
@@ -33,12 +34,17 @@ jobs:
         with:
           run_install: false
 
+      # Trusted publishing needs Node 22.14+ and npm 11.5.1+. Node 22 ships an
+      # npm below that, so the CLI is upgraded separately below.
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -64,7 +70,32 @@ jobs:
             exit 1
           fi
 
+      # No NODE_AUTH_TOKEN: the OIDC exchange authenticates this publish, and
+      # provenance is attached automatically. See RELEASING.md for the one-time
+      # trusted publisher setup.
       - name: Publish
-        run: npm publish --provenance --access public
+        run: npm publish
+
+  github-release:
+    name: Create GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Kept out of the publish job so that job stays read-only on contents.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Release notes feed Dependabot and Renovate upgrade PRs, which are
+      # otherwise empty for consumers.
+      - name: Create release
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
