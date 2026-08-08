@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: en-US
+
+tone_instructions: >-
+  Be direct and concise. Never use em dashes or en dashes in any comment,
+  summary, or suggested code. Use periods, commas, colons, or parentheses.
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  poem: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - WIP
+      - DO NOT MERGE
+
+  path_filters:
+    - '!**/node_modules/**'
+    - '!**/pnpm-lock.yaml'
+    - '!**/.DS_Store'
+    - '!dist/**'
+    - '!coverage/**'
+
+  path_instructions:
+    - path: '**'
+      instructions: |
+        Never use em dashes or en dashes anywhere, including code comments,
+        JSDoc, alt text, metadata, and commit messages. Use a period, comma,
+        colon, parentheses, or a plain hyphen instead.
+        This project uses pnpm only. Flag npm or yarn commands in scripts,
+        docs, CI, and Dockerfiles.
+        Keep functions small and single-purpose.
+        Never run package installs or commit pnpm-lock.yaml changes when
+        applying fixes. Lockfiles change only together with a package.json
+        change, made by a human with the pinned pnpm version.
+
+    - path: 'src/**/*.ts'
+      instructions: |
+        This is a published SDK, so the exported surface is a contract. Flag
+        breaking changes to exported types, method names, or return shapes,
+        since fixing them later needs a major release.
+        Flag any new runtime dependency. This package ships with zero.
+        Flag anything that could log or surface the api key or a webhook
+        signing secret, including error messages and thrown objects.
+        Flag drift from the REST contract: auth is the x-api-key header and
+        never a query param, request bodies use the modern field names
+        (message, recipients) and never smsBody or receivers, and each endpoint
+        has its own response envelope. getMessages returns { data, meta } with
+        no outer wrapper and getSmsBatch nests under data, so a single generic
+        unwrap is wrong.
+        Acronyms are words in exported identifiers: sendSms, not sendSMS. Raw
+        API field names like sentSMSCount are exempt because they are wire
+        values.
+        Source must stay runtime agnostic. Flag any node: import in src, which
+        would break Cloudflare Workers and edge runtimes.
+
+    - path: '.github/workflows/**'
+      instructions: |
+        Flag unpinned action versions, secrets echoed into logs or files, and
+        steps that would run untrusted code from fork pull requests.
+
+  tools:
+    # Waits for ALL GitHub Checks, then comments on failures.
+    github-checks:
+      enabled: true
+
+chat:
+  auto_reply: true
+  # Public repo, so outside contributors can spend the chat quota.
+  # Set to false if that becomes a problem.
+  allow_non_org_members: true
+
+knowledge_base:
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  pull_requests:
+    scope: auto
