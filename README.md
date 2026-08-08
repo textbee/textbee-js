@@ -1,5 +1,9 @@
 # @textbee/sdk
 
+[![npm](https://img.shields.io/npm/v/@textbee/sdk)](https://www.npmjs.com/package/@textbee/sdk)
+[![CI](https://github.com/textbee/textbee-js/actions/workflows/ci.yaml/badge.svg)](https://github.com/textbee/textbee-js/actions/workflows/ci.yaml)
+[![license](https://img.shields.io/npm/l/@textbee/sdk)](./LICENSE)
+
 Official JavaScript SDK for [textbee.dev](https://textbee.dev), the open source SMS gateway that turns an Android phone into an SMS API.
 
 Zero dependencies, TypeScript types included, works in Node 18+, Bun, Deno, Cloudflare Workers, and Vercel Edge.
