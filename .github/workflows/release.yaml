@@ -1,0 +1,126 @@
+# Releasing is driven by the version field in package.json.
+#
+# Bump "version", merge it to main, and this publishes it. The pull request
+# carrying the bump is the release proposal: reviewing and merging it is the
+# approval step, so there is no bot pull request on top of it.
+#
+# The guard compares package.json against the git tags, not against the
+# previous commit, so the job is idempotent. Pushes that do not change the
+# version are a no-op, and a failed release can be retried by pushing again.
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never let two releases run at once, and never cancel one midway: an
+# interrupted run can leave a version on npm with no tag behind it.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check for an unreleased version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      should_release: ${{ steps.check.outputs.should_release }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          # Tags are the record of what has shipped, so fetch all of them.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compare package.json version against existing tags
+        id: check
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "v$version is already tagged, nothing to release."
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "v$version has no tag yet, releasing."
+          fi
+
+  release:
+    name: Publish v${{ needs.check.outputs.version }}
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Creating the tag and the GitHub release.
+      contents: write
+      # Minting the OIDC token npm exchanges for a publish credential.
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      # Trusted publishing needs Node 22.14+ and npm 11.5.1+. Node 22 ships an
+      # older npm, so the CLI is upgraded separately below.
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Unit test
+        run: pnpm test
+
+      # npm publish runs before tagging on purpose. If it fails there is no tag,
+      # so the next push retries cleanly. Tagging first would make the guard
+      # above skip the retry and wedge the release.
+      #
+      # No NODE_AUTH_TOKEN: the OIDC exchange authenticates this publish and
+      # attaches a provenance attestation automatically.
+      - name: Publish to npm
+        run: npm publish
+
+      # Creates the tag as well as the release. Notes are generated from the
+      # commits since the previous tag, and feed Dependabot and Renovate
+      # upgrade pull requests, which are otherwise empty for consumers.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --target "$GITHUB_SHA" \
+            --generate-notes
