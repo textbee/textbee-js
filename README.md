@@ -74,11 +74,14 @@ await textbee.setDefaultDevice(deviceId)
 ```js
 // Paginated history, filterable and searchable
 const { data, meta } = await textbee.getMessages(deviceId, {
-  type: 'received', // 'all' | 'sent' | 'received'
+  type: 'received', // filter is lowercase: 'all' | 'sent' | 'received'
   page: 1,
   limit: 50,
   search: 'invoice',
 })
+
+// Each message reports its direction uppercase, so compare accordingly
+data.filter((m) => m.type === 'RECEIVED')
 
 // A single message and its current status
 const sms = await textbee.getSms(deviceId, smsId)
@@ -137,7 +140,7 @@ new Textbee({
 
 ## What is not covered yet
 
-v0.0.1 focuses on sending and reading messages. Bulk send and a few device operations are still REST only, documented at [textbee.dev/docs](https://textbee.dev/docs).
+The SDK focuses on sending and reading messages. Bulk send and a few device operations are still REST only, documented at [textbee.dev/docs](https://textbee.dev/docs).
 
 ## License
 
