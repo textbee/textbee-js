@@ -28,7 +28,7 @@ import { Textbee } from '@textbee/sdk'
 const textbee = new Textbee({ apiKey: process.env.TEXTBEE_API_KEY })
 
 await textbee.sendSms({
-  recipients: ['+251912345678'],
+  recipients: ['+12025550123'],
   message: 'Hello from textbee!',
 })
 ```
@@ -45,7 +45,7 @@ await textbee.sendSms({
 
 ```js
 await textbee.sendSms({
-  recipients: ['+251912345678'],
+  recipients: ['+12025550123'],
   message: 'Your appointment is tomorrow at 9am',
   deviceId: '65f0000000000000000000aa',
   simSubscriptionId: 2,
@@ -127,6 +127,65 @@ app.post('/webhooks/textbee', express.raw({ type: 'application/json' }), async (
 })
 ```
 
+## SMS utilities
+
+Pure helpers for working with SMS text and phone numbers. No API key, no network calls, and they are useful with any SMS provider, not just textbee. Import only what you need and the rest is tree-shaken away.
+
+### Segments and encoding
+
+Carriers bill per segment, not per message. A message stays in the 7-bit GSM alphabet at 160 characters per segment, but a single character outside that alphabet, one emoji or one curly quote, switches the whole message to UCS-2 and drops the limit to 70.
+
+```js
+import { countSmsSegments, getSmsEncoding, findNonGsm7Characters } from '@textbee/sdk'
+
+countSmsSegments('Your code is 123456')
+// { encoding: 'gsm-7', length: 19, segments: 1, remainingInSegment: 141 }
+
+countSmsSegments('Your code is 123456 🎉')
+// { encoding: 'ucs-2', length: 22, segments: 1, remainingInSegment: 48 }
+
+getSmsEncoding('plain ascii') // 'gsm-7'
+findNonGsm7Characters('Hi 🎉') // ['🎉']
+```
+
+Longer messages are split, and concatenation headers shrink each segment to 153 characters (GSM-7) or 67 (UCS-2). `remainingInSegment` counts single-unit characters, so a two-unit character such as an emoji or `€` may not fit even when it reads as 1.
+
+### Keeping messages in GSM-7
+
+Text pasted from a word processor or a CMS is full of curly quotes, ellipses, and non-breaking spaces. `sanitizeForGsm7` swaps them for plain equivalents so a message does not silently cost three times as much.
+
+```js
+import { sanitizeForGsm7, countSmsSegments } from '@textbee/sdk'
+
+const pasted = '“Your order shipped…”'
+countSmsSegments(pasted).encoding // 'ucs-2'
+
+const clean = sanitizeForGsm7(pasted) // '"Your order shipped..."'
+countSmsSegments(clean).encoding // 'gsm-7'
+
+// Optionally strip accents that GSM-7 does not carry. Letters it does carry,
+// like é, ü, and ñ, are always left alone.
+sanitizeForGsm7('naïve', { transliterateAccents: true }) // 'naive'
+```
+
+It is best effort: characters with no safe equivalent pass through untouched. Check the result with `getSmsEncoding` and see what is left with `findNonGsm7Characters`.
+
+### Phone number helpers
+
+```js
+import { isValidE164, normalizePhoneNumber } from '@textbee/sdk'
+
+isValidE164('+12025550123') // true
+isValidE164('202-555-0123') // false
+
+normalizePhoneNumber('+1 (202) 555-0123') // '+12025550123'
+normalizePhoneNumber('0012025550123') // '+12025550123'
+normalizePhoneNumber('(202) 555-0123', { defaultCountryCode: '1' }) // '+12025550123'
+normalizePhoneNumber('not a number') // null
+```
+
+These are format-only helpers, not [libphonenumber](https://github.com/google/libphonenumber). They know nothing about country dialing plans, so a well-formed but unassigned number still passes. Input that cannot be normalized returns `null`; an unusable `defaultCountryCode` throws a `TypeError`.
+
 ## Errors
 
 Any non-2xx response throws a `TextbeeError` carrying the status and the parsed body. Network failures reject with the underlying `fetch` error instead.
@@ -135,7 +194,7 @@ Any non-2xx response throws a `TextbeeError` carrying the status and the parsed 
 import { TextbeeError } from '@textbee/sdk'
 
 try {
-  await textbee.sendSms({ recipients: ['+251912345678'], message: 'hi' })
+  await textbee.sendSms({ recipients: ['+12025550123'], message: 'hi' })
 } catch (error) {
   if (error instanceof TextbeeError) {
     console.error(error.status, error.message)

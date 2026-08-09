@@ -7,7 +7,7 @@ const SIGNING_SECRET = 'whsec_test_secret'
 const payload = {
   event: 'MESSAGE_RECEIVED',
   smsId: '65f0000000000000000000bb',
-  sender: '+251912345678',
+  sender: '+12025550123',
   message: 'hello',
 }
 

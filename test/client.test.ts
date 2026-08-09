@@ -52,7 +52,7 @@ describe('sendSms', () => {
 
     await client().sendSms({
       message: 'Hello from textbee',
-      recipients: ['+251912345678'],
+      recipients: ['+12025550123'],
     })
 
     const call = lastCall()
@@ -61,7 +61,7 @@ describe('sendSms', () => {
     expect(call.headers['x-api-key']).toBe(API_KEY)
     expect(call.body).toEqual({
       message: 'Hello from textbee',
-      recipients: ['+251912345678'],
+      recipients: ['+12025550123'],
     })
     expect(call.body).not.toHaveProperty('smsBody')
     expect(call.body).not.toHaveProperty('receivers')
@@ -81,7 +81,7 @@ describe('sendSms', () => {
 
     const result = await client().sendSms({
       message: 'queued',
-      recipients: ['+251912345678', '+251912345679'],
+      recipients: ['+12025550123', '+12025550124'],
     })
 
     expect('smsBatchId' in result).toBe(true)
@@ -96,19 +96,19 @@ describe('sendSms', () => {
 
     await client().sendSms({
       message: 'with options',
-      recipients: ['+251912345678'],
+      recipients: ['+12025550123'],
       deviceId: DEVICE_ID,
       simSubscriptionId: 2,
     })
 
     expect(lastCall().body).toEqual({
       message: 'with options',
-      recipients: ['+251912345678'],
+      recipients: ['+12025550123'],
       deviceId: DEVICE_ID,
       simSubscriptionId: 2,
     })
 
-    await client().sendSms({ message: 'bare', recipients: ['+251912345678'] })
+    await client().sendSms({ message: 'bare', recipients: ['+12025550123'] })
 
     const keys = Object.keys(lastCall().body)
     expect(keys).not.toContain('deviceId')
@@ -125,7 +125,7 @@ describe('sendSms', () => {
 
     await client().sendSms({
       message: 'later',
-      recipients: ['+251912345678'],
+      recipients: ['+12025550123'],
       scheduledAt: farFuture,
     })
 
@@ -140,7 +140,7 @@ describe('errors', () => {
     )
 
     await expect(
-      client().sendSms({ message: 'x', recipients: ['+251912345678'] }),
+      client().sendSms({ message: 'x', recipients: ['+12025550123'] }),
     ).rejects.toMatchObject({
       name: 'TextbeeError',
       status: 400,
