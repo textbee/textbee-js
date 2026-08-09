@@ -5,10 +5,12 @@ export { verifyWebhookSignature } from './webhooks'
 export type { VerifyWebhookSignatureOptions } from './webhooks'
 export type {
   Device,
-  GetMessagesOptions,
+  IterateMessagesOptions,
+  ListMessagesOptions,
   Message,
-  MessagesPage,
-  PaginationMeta,
+  MessageDevice,
+  MessageList,
+  MessageListMeta,
   SendSmsImmediateResponse,
   SendSmsQueuedResponse,
   SendSmsRequest,
