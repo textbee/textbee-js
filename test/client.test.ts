@@ -220,6 +220,102 @@ describe('response envelopes', () => {
     expect(new URL(lastCall().url).search).toBe('')
   })
 
+  it('routes the account-level getMessages overload to /gateway/messages', async () => {
+    const page = {
+      data: [
+        {
+          _id: 'sms-1',
+          message: 'hi',
+          type: 'RECEIVED',
+          direction: 'received',
+          status: 'received',
+        },
+      ],
+      meta: { page: 1, limit: 50, total: 1, totalPages: 1, nextCursor: null, hasMore: false },
+    }
+    fetchMock.mockImplementation(async () => respond(200, page))
+
+    const result = await client().getMessages({
+      deviceIds: ['dev-a', 'dev-b'],
+      direction: 'received',
+      status: 'received',
+      from: new Date('2026-08-01T00:00:00.000Z'),
+      to: '2026-09-01T00:00:00Z',
+      order: 'asc',
+      limit: 50,
+    })
+
+    expect(result).toEqual(page)
+
+    const url = new URL(lastCall().url)
+    expect(url.pathname).toBe('/api/v1/gateway/messages')
+    expect(url.searchParams.get('deviceIds')).toBe('dev-a,dev-b')
+    expect(url.searchParams.get('direction')).toBe('received')
+    expect(url.searchParams.get('status')).toBe('received')
+    // Dates serialize to the explicit-timezone form the API requires
+    expect(url.searchParams.get('from')).toBe('2026-08-01T00:00:00.000Z')
+    expect(url.searchParams.get('to')).toBe('2026-09-01T00:00:00Z')
+    expect(url.searchParams.get('order')).toBe('asc')
+    expect(url.searchParams.get('type')).toBeNull()
+  })
+
+  it('sends no query at all for a bare account-level getMessages()', async () => {
+    fetchMock.mockImplementation(async () => respond(200, { data: [], meta: {} }))
+
+    await client().getMessages()
+
+    const url = new URL(lastCall().url)
+    expect(url.pathname).toBe('/api/v1/gateway/messages')
+    expect(url.search).toBe('')
+  })
+
+  it('iterateMessages follows nextCursor to the end and then stops', async () => {
+    const pages = [
+      {
+        data: [{ _id: 'a' }, { _id: 'b' }],
+        meta: { page: 1, limit: 2, total: 5, totalPages: 3, nextCursor: 'cur-1', hasMore: true },
+      },
+      {
+        data: [{ _id: 'c' }, { _id: 'd' }],
+        meta: { limit: 2, nextCursor: 'cur-2', hasMore: true },
+      },
+      {
+        data: [{ _id: 'e' }],
+        meta: { limit: 2, nextCursor: null, hasMore: false },
+      },
+    ]
+    fetchMock.mockImplementation(async () => respond(200, pages[fetchMock.mock.calls.length - 1]))
+
+    const seen: string[] = []
+    for await (const message of client().iterateMessages({ order: 'asc' })) {
+      seen.push(message._id)
+    }
+
+    expect(seen).toEqual(['a', 'b', 'c', 'd', 'e'])
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    // First call opens without a cursor; later calls carry the returned one
+    const cursors = fetchMock.mock.calls.map(
+      (call) => new URL(String(call?.[0])).searchParams.get('cursor'),
+    )
+    expect(cursors).toEqual([null, 'cur-1', 'cur-2'])
+  })
+
+  it('iterateMessages stops early when the consumer breaks out', async () => {
+    fetchMock.mockImplementation(async () =>
+      respond(200, {
+        data: [{ _id: 'a' }, { _id: 'b' }],
+        meta: { limit: 2, nextCursor: 'cur-1', hasMore: true },
+      }),
+    )
+
+    for await (const message of client().iterateMessages()) {
+      void message
+      break
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('unwraps the nested getSmsBatch envelope', async () => {
     fetchMock.mockResolvedValue(
       respond(200, {

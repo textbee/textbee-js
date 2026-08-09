@@ -78,6 +78,55 @@ export interface GetMessagesOptions {
   search?: string
 }
 
+export interface ListMessagesOptions {
+  /** Only messages from these devices. Omit for every device on the account. */
+  deviceIds?: string[]
+
+  /** Filter by direction. Defaults to `all`. */
+  direction?: 'all' | 'sent' | 'received'
+
+  /** Filter by delivery state, e.g. `failed` to list sends that failed. */
+  status?:
+    | 'pending'
+    | 'dispatched'
+    | 'sent'
+    | 'delivered'
+    | 'failed'
+    | 'unknown'
+    | 'received'
+
+  /** Free text match across the message body, recipient, and sender. */
+  search?: string
+
+  /**
+   * Inclusive lower bound on when the platform stored the message. A string
+   * must carry an explicit timezone (`2026-08-01T00:00:00Z`); a bare date like
+   * `2026-08-01` is read as UTC midnight.
+   */
+  from?: string | Date
+
+  /** Exclusive upper bound, same formats as `from`. */
+  to?: string | Date
+
+  /** `desc` (default) for newest first, `asc` to walk forward when polling. */
+  order?: 'desc' | 'asc'
+
+  /** 1-based page number. Defaults to 1. Mutually exclusive with `cursor`. */
+  page?: number
+
+  /** Items per page. Defaults to 50, capped at 100 by the API. */
+  limit?: number
+
+  /**
+   * Opaque position from a previous response's `meta.nextCursor`. When set,
+   * `meta` switches to cursor mode and omits the total count.
+   */
+  cursor?: string
+}
+
+/** Everything `iterateMessages` accepts: a filter set, minus the paging knobs it drives itself. */
+export type IterateMessagesOptions = Omit<ListMessagesOptions, 'page' | 'cursor'>
+
 export interface Device {
   _id: string
   name?: string
@@ -97,14 +146,33 @@ export interface Device {
   updatedAt?: string
 }
 
+export interface MessageDevice {
+  _id: string
+  brand?: string
+  model?: string
+  buildId?: string
+  enabled?: boolean
+}
+
 export interface Message {
   _id: string
   message: string
   /**
-   * Direction, uppercase. Note the asymmetry with the `type` filter accepted by
-   * getMessages, which is lowercase.
+   * Direction, uppercase.
+   *
+   * @deprecated Read `direction` instead: it is lowercase and matches the
+   * `direction` filter, so a response value feeds straight back into a query.
    */
   type: 'SENT' | 'RECEIVED'
+  /**
+   * Direction, lowercase. Present on messages from the account-level
+   * endpoint; absent from the deprecated device-scoped one.
+   */
+  direction?: 'sent' | 'received'
+  /** Message channel. Currently always `sms`; absent means `sms`. */
+  channel?: string
+  /** The sending or receiving device, populated by the history endpoints. */
+  device?: MessageDevice
   /** Lowercase, and absent on messages stored before status tracking. */
   status?:
     | 'pending'
@@ -160,6 +228,26 @@ export interface PaginationMeta {
 export interface MessagesPage {
   data: Message[]
   meta: PaginationMeta
+}
+
+/**
+ * Meta for the account-level message list. Page mode carries the counters and
+ * the cursor fields; cursor mode carries `limit`, `nextCursor`, and `hasMore`
+ * only, skipping the expensive total count.
+ */
+export interface MessageListMeta {
+  limit: number
+  page?: number
+  total?: number
+  totalPages?: number
+  /** Opaque position after the last message. Null on the final page. */
+  nextCursor?: string | null
+  hasMore?: boolean
+}
+
+export interface MessageList {
+  data: Message[]
+  meta: MessageListMeta
 }
 
 export interface SmsBatchResult {

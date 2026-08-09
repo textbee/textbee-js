@@ -71,17 +71,29 @@ await textbee.setDefaultDevice(deviceId)
 
 ## Messages and delivery status
 
+History is account-level: one call covers every device, and `deviceIds` narrows it.
+
 ```js
-// Paginated history, filterable and searchable
-const { data, meta } = await textbee.getMessages(deviceId, {
-  type: 'received', // filter is lowercase: 'all' | 'sent' | 'received'
+// Paginated history across the whole account, filterable and searchable
+const { data, meta } = await textbee.getMessages({
+  direction: 'received', // 'all' | 'sent' | 'received'
+  deviceIds: [deviceId], // omit for every device
+  status: 'delivered', // delivery state; direction=sent + status=failed lists failed sends
+  search: 'invoice',
+  from: '2026-08-01', // dates are UTC; datetimes need an explicit timezone
+  to: '2026-09-01T00:00:00Z', // exclusive, so windows never double-count
   page: 1,
   limit: 50,
-  search: 'invoice',
 })
 
-// Each message reports its direction uppercase, so compare accordingly
-data.filter((m) => m.type === 'RECEIVED')
+// direction on each message is lowercase and feeds straight back into filters
+data.filter((m) => m.direction === 'received')
+
+// Drain everything matching a filter: iterateMessages follows the
+// pagination cursor for you until there is nothing left
+for await (const message of textbee.iterateMessages({ direction: 'received', order: 'asc' })) {
+  console.log(message.sender, message.message)
+}
 
 // A single message and its current status
 const sms = await textbee.getSms(deviceId, smsId)
@@ -89,6 +101,8 @@ const sms = await textbee.getSms(deviceId, smsId)
 // A whole batch, using the smsBatchId returned by sendSms
 const { batch, messages } = await textbee.getSmsBatch(deviceId, smsBatchId)
 ```
+
+The older `getMessages(deviceId, { type })` form still works but is deprecated; new code should pass an options object.
 
 ## Verifying webhooks
 

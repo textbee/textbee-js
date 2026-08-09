@@ -2,7 +2,10 @@ import { TextbeeError } from './errors'
 import type {
   Device,
   GetMessagesOptions,
+  IterateMessagesOptions,
+  ListMessagesOptions,
   Message,
+  MessageList,
   MessagesPage,
   SendSmsRequest,
   SendSmsResponse,
@@ -88,25 +91,84 @@ export class Textbee {
     return payload.data
   }
 
-  /** Page through a device's sent and received messages. */
+  /**
+   * Page through the account's sent and received messages, filtered by
+   * device, direction, status, text, and time range.
+   */
+  async getMessages(options?: ListMessagesOptions): Promise<MessageList>
+  /**
+   * Page through a device's sent and received messages.
+   *
+   * @deprecated Use `getMessages(options)` with `deviceIds: [deviceId]`. This
+   * form calls the deprecated device-scoped endpoint, which stays supported
+   * but no longer appears in the API reference.
+   */
   async getMessages(
     deviceId: string,
-    options: GetMessagesOptions = {},
-  ): Promise<MessagesPage> {
-    // This endpoint returns { data, meta } with no outer wrapper, so the whole
+    options?: GetMessagesOptions,
+  ): Promise<MessagesPage>
+  async getMessages(
+    deviceIdOrOptions?: string | ListMessagesOptions,
+    deviceOptions: GetMessagesOptions = {},
+  ): Promise<MessageList | MessagesPage> {
+    // Both endpoints return { data, meta } with no outer wrapper, so the whole
     // payload is the result.
-    return await this.#request<MessagesPage>(
-      'GET',
-      `/gateway/devices/${encodeURIComponent(deviceId)}/messages`,
-      {
-        query: {
-          type: options.type,
-          page: options.page,
-          limit: options.limit,
-          search: options.search,
+    if (typeof deviceIdOrOptions === 'string') {
+      return await this.#request<MessagesPage>(
+        'GET',
+        `/gateway/devices/${encodeURIComponent(deviceIdOrOptions)}/messages`,
+        {
+          query: {
+            type: deviceOptions.type,
+            page: deviceOptions.page,
+            limit: deviceOptions.limit,
+            search: deviceOptions.search,
+          },
         },
+      )
+    }
+
+    const options = deviceIdOrOptions ?? {}
+    return await this.#request<MessageList>('GET', '/gateway/messages', {
+      query: {
+        deviceIds: options.deviceIds?.length
+          ? options.deviceIds.join(',')
+          : undefined,
+        direction: options.direction,
+        status: options.status,
+        search: options.search,
+        from: toIsoString(options.from),
+        to: toIsoString(options.to),
+        order: options.order,
+        page: options.page,
+        limit: options.limit,
+        cursor: options.cursor,
       },
-    )
+    })
+  }
+
+  /**
+   * Iterate every message matching the filters, following the pagination
+   * cursor until the end. Use `order: 'asc'` with a `from` bound to drain
+   * forward when polling; keep the last message's `createdAt` (or track
+   * `meta.nextCursor` via `getMessages`) to resume the next poll.
+   *
+   * ```ts
+   * for await (const message of textbee.iterateMessages({ direction: 'received' })) {
+   *   handle(message)
+   * }
+   * ```
+   */
+  async *iterateMessages(
+    options: IterateMessagesOptions = {},
+  ): AsyncGenerator<Message, void, undefined> {
+    let page = await this.getMessages(options)
+    yield* page.data
+
+    while (page.meta.nextCursor) {
+      page = await this.getMessages({ ...options, cursor: page.meta.nextCursor })
+      yield* page.data
+    }
   }
 
   /** Fetch a single message, including its delivery status. */
@@ -166,6 +228,10 @@ export class Textbee {
 
     return payload as T
   }
+}
+
+function toIsoString(value: string | Date | undefined): string | undefined {
+  return value instanceof Date ? value.toISOString() : value
 }
 
 async function readBody(response: Response): Promise<unknown> {
