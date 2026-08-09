@@ -1,6 +1,6 @@
 {
   "name": "@textbee/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official JavaScript SDK for textbee.dev, the open source SMS gateway",
   "license": "MIT",
   "packageManager": "pnpm@9.14.2",
@@ -44,7 +44,10 @@
     "sms",
     "sms-gateway",
     "textbee",
-    "android"
+    "android",
+    "sms-segments",
+    "gsm-7",
+    "e164"
   ],
   "scripts": {
     "build": "tsup",
