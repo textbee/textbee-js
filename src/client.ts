@@ -1,12 +1,10 @@
 import { TextbeeError } from './errors'
 import type {
   Device,
-  GetMessagesOptions,
   IterateMessagesOptions,
   ListMessagesOptions,
   Message,
   MessageList,
-  MessagesPage,
   SendSmsRequest,
   SendSmsResponse,
   SmsBatchResult,
@@ -93,42 +91,11 @@ export class Textbee {
 
   /**
    * Page through the account's sent and received messages, filtered by
-   * device, direction, status, text, and time range.
+   * device, batch, direction, status, text, and time range.
    */
-  async getMessages(options?: ListMessagesOptions): Promise<MessageList>
-  /**
-   * Page through a device's sent and received messages.
-   *
-   * @deprecated Use `getMessages(options)` with `deviceIds: [deviceId]`. This
-   * form calls the deprecated device-scoped endpoint, which stays supported
-   * but no longer appears in the API reference.
-   */
-  async getMessages(
-    deviceId: string,
-    options?: GetMessagesOptions,
-  ): Promise<MessagesPage>
-  async getMessages(
-    deviceIdOrOptions?: string | ListMessagesOptions,
-    deviceOptions: GetMessagesOptions = {},
-  ): Promise<MessageList | MessagesPage> {
-    // Both endpoints return { data, meta } with no outer wrapper, so the whole
+  async getMessages(options: ListMessagesOptions = {}): Promise<MessageList> {
+    // The endpoint returns { data, meta } with no outer wrapper, so the whole
     // payload is the result.
-    if (typeof deviceIdOrOptions === 'string') {
-      return await this.#request<MessagesPage>(
-        'GET',
-        `/gateway/devices/${encodeURIComponent(deviceIdOrOptions)}/messages`,
-        {
-          query: {
-            type: deviceOptions.type,
-            page: deviceOptions.page,
-            limit: deviceOptions.limit,
-            search: deviceOptions.search,
-          },
-        },
-      )
-    }
-
-    const options = deviceIdOrOptions ?? {}
     return await this.#request<MessageList>('GET', '/gateway/messages', {
       query: {
         deviceIds: options.deviceIds?.length

@@ -64,20 +64,6 @@ export interface SendSmsImmediateResponse {
  */
 export type SendSmsResponse = SendSmsQueuedResponse | SendSmsImmediateResponse
 
-export interface GetMessagesOptions {
-  /** Filter by direction. Defaults to `all`. */
-  type?: 'all' | 'sent' | 'received'
-
-  /** 1-based page number. Defaults to 1. */
-  page?: number
-
-  /** Items per page. Defaults to 50, capped at 100 by the API. */
-  limit?: number
-
-  /** Free text match across the message body, recipient, and sender. */
-  search?: string
-}
-
 export interface ListMessagesOptions {
   /** Only messages from these devices. Omit for every device on the account. */
   deviceIds?: string[]
@@ -170,10 +156,7 @@ export interface Message {
    * `direction` filter, so a response value feeds straight back into a query.
    */
   type: 'SENT' | 'RECEIVED'
-  /**
-   * Direction, lowercase. Present on messages from the account-level
-   * endpoint; absent from the deprecated device-scoped one.
-   */
+  /** Direction, lowercase. Matches the `direction` filter values. */
   direction?: 'sent' | 'received'
   /** Message channel. Currently always `sms`; absent means `sms`. */
   channel?: string
@@ -222,18 +205,6 @@ export interface SmsBatch {
   completedAt?: string
   createdAt?: string
   updatedAt?: string
-}
-
-export interface PaginationMeta {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
-export interface MessagesPage {
-  data: Message[]
-  meta: PaginationMeta
 }
 
 /**

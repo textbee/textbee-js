@@ -106,8 +106,6 @@ const sms = await textbee.getSms(deviceId, smsId)
 const { batch, messages } = await textbee.getSmsBatch(deviceId, smsBatchId)
 ```
 
-The older `getMessages(deviceId, { type })` form still works but is deprecated; new code should pass an options object.
-
 ## Verifying webhooks
 
 textbee signs each webhook delivery with HMAC-SHA256 and sends the hex digest in the `X-Signature` header. Pass the raw request body, not a re-serialized object, whenever your framework gives you access to it.

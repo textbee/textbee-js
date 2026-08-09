@@ -187,40 +187,6 @@ describe('telemetry headers', () => {
 
 describe('response envelopes', () => {
   it('returns getMessages as { data, meta } because it has no outer wrapper', async () => {
-    // The response carries the direction uppercase while the query filter
-    // below stays lowercase. That asymmetry is the API's, not a typo here.
-    const page = {
-      data: [{ _id: 'sms-1', message: 'hi', type: 'RECEIVED', status: 'received' }],
-      meta: { page: 2, limit: 10, total: 11, totalPages: 2 },
-    }
-    fetchMock.mockImplementation(async () => respond(200, page))
-
-    const result = await client().getMessages(DEVICE_ID, {
-      type: 'received',
-      page: 2,
-      limit: 10,
-      search: 'hi there',
-    })
-
-    expect(result).toEqual(page)
-
-    const url = new URL(lastCall().url)
-    expect(url.pathname).toBe(`/api/v1/gateway/devices/${DEVICE_ID}/messages`)
-    expect(url.searchParams.get('type')).toBe('received')
-    expect(url.searchParams.get('page')).toBe('2')
-    expect(url.searchParams.get('limit')).toBe('10')
-    expect(url.searchParams.get('search')).toBe('hi there')
-  })
-
-  it('omits unset getMessages query params', async () => {
-    fetchMock.mockImplementation(async () => respond(200, { data: [], meta: {} }))
-
-    await client().getMessages(DEVICE_ID)
-
-    expect(new URL(lastCall().url).search).toBe('')
-  })
-
-  it('routes the account-level getMessages overload to /gateway/messages', async () => {
     const page = {
       data: [
         {
