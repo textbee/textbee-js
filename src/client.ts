@@ -134,6 +134,7 @@ export class Textbee {
         deviceIds: options.deviceIds?.length
           ? options.deviceIds.join(',')
           : undefined,
+        smsBatchId: options.smsBatchId,
         direction: options.direction,
         status: options.status,
         search: options.search,

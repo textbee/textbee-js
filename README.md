@@ -89,6 +89,10 @@ const { data, meta } = await textbee.getMessages({
 // direction on each message is lowercase and feeds straight back into filters
 data.filter((m) => m.direction === 'received')
 
+// Which recipients of a bulk send failed: filter by the batch a send returned
+const { smsBatchId } = await textbee.sendSms({ recipients, message })
+const failed = await textbee.getMessages({ smsBatchId, status: 'failed' })
+
 // Drain everything matching a filter: iterateMessages follows the
 // pagination cursor for you until there is nothing left
 for await (const message of textbee.iterateMessages({ direction: 'received', order: 'asc' })) {

@@ -237,6 +237,7 @@ describe('response envelopes', () => {
 
     const result = await client().getMessages({
       deviceIds: ['dev-a', 'dev-b'],
+      smsBatchId: 'batch-1',
       direction: 'received',
       status: 'received',
       from: new Date('2026-08-01T00:00:00.000Z'),
@@ -250,6 +251,7 @@ describe('response envelopes', () => {
     const url = new URL(lastCall().url)
     expect(url.pathname).toBe('/api/v1/gateway/messages')
     expect(url.searchParams.get('deviceIds')).toBe('dev-a,dev-b')
+    expect(url.searchParams.get('smsBatchId')).toBe('batch-1')
     expect(url.searchParams.get('direction')).toBe('received')
     expect(url.searchParams.get('status')).toBe('received')
     // Dates serialize to the explicit-timezone form the API requires

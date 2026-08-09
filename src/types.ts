@@ -82,6 +82,12 @@ export interface ListMessagesOptions {
   /** Only messages from these devices. Omit for every device on the account. */
   deviceIds?: string[]
 
+  /**
+   * Only messages from this batch, using the `smsBatchId` a send returns.
+   * Combine with `status: 'failed'` to list the recipients that failed.
+   */
+  smsBatchId?: string
+
   /** Filter by direction. Defaults to `all`. */
   direction?: 'all' | 'sent' | 'received'
 
