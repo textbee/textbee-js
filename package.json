@@ -1,6 +1,6 @@
 {
   "name": "@textbee/sdk",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Official JavaScript SDK for textbee.dev, the open source SMS gateway",
   "license": "MIT",
   "packageManager": "pnpm@9.14.2",

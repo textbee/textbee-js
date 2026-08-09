@@ -187,8 +187,10 @@ describe('telemetry headers', () => {
 
 describe('response envelopes', () => {
   it('returns getMessages as { data, meta } because it has no outer wrapper', async () => {
+    // The response carries the direction uppercase while the query filter
+    // below stays lowercase. That asymmetry is the API's, not a typo here.
     const page = {
-      data: [{ _id: 'sms-1', message: 'hi', type: 'received', status: 'received' }],
+      data: [{ _id: 'sms-1', message: 'hi', type: 'RECEIVED', status: 'received' }],
       meta: { page: 2, limit: 10, total: 11, totalPages: 2 },
     }
     fetchMock.mockImplementation(async () => respond(200, page))

@@ -100,8 +100,13 @@ export interface Device {
 export interface Message {
   _id: string
   message: string
-  type: 'sent' | 'received'
-  status:
+  /**
+   * Direction, uppercase. Note the asymmetry with the `type` filter accepted by
+   * getMessages, which is lowercase.
+   */
+  type: 'SENT' | 'RECEIVED'
+  /** Lowercase, and absent on messages stored before status tracking. */
+  status?:
     | 'pending'
     | 'dispatched'
     | 'sent'
