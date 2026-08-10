@@ -217,6 +217,10 @@ new Textbee({
 
 The SDK focuses on sending and reading messages. Bulk send and a few device operations are still REST only, documented at [textbee.dev/docs](https://textbee.dev/docs).
 
+## Community and support
+
+Questions or feedback? Join the community on [Discord](https://textbee.dev/discord) or email support@textbee.dev.
+
 ## License
 
 MIT. Part of the [textbee](https://github.com/vernu/textbee) project.
