@@ -223,4 +223,4 @@ Questions or feedback? Join the community on [Discord](https://textbee.dev/disco
 
 ## License
 
-MIT. Part of the [textbee](https://github.com/vernu/textbee) project.
+MIT. Part of the [textbee](https://github.com/textbee/textbee) project.
