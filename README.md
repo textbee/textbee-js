@@ -106,6 +106,8 @@ const sms = await textbee.getSms(deviceId, smsId)
 const { batch, messages } = await textbee.getSmsBatch(deviceId, smsBatchId)
 ```
 
+`batch.status` and the batch counts come from the messages in the batch, so they change as each message reports. `successCount` counts messages sent or delivered, and `failureCount` counts failed ones. `pendingCount`, `dispatchedCount`, `sentCount`, `deliveredCount` and `unknownCount` break the rest down by state.
+
 ## Verifying webhooks
 
 textbee signs each webhook delivery with HMAC-SHA256 and sends the hex digest in the `X-Signature` header. Pass the raw request body, not a re-serialized object, whenever your framework gives you access to it.

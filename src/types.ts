@@ -187,13 +187,29 @@ export interface Message {
   updatedAt?: string
 }
 
+/**
+ * A send batch. The status and counts are calculated from the batch's
+ * messages, so they change as each message reports.
+ */
 export interface SmsBatch {
   _id: string
   message: string
   recipientCount: number
   recipientPreview?: string
+  /** Messages sent or delivered: `sentCount + deliveredCount`. */
   successCount: number
+  /** Messages that failed. */
   failureCount: number
+  /** Messages not yet handed to the phone. */
+  pendingCount?: number
+  /** Messages handed to the phone with no result yet. */
+  dispatchedCount?: number
+  /** Messages sent with no delivery report yet. */
+  sentCount?: number
+  /** Messages with a delivery report. */
+  deliveredCount?: number
+  /** Messages with no report from the phone within 20 minutes. */
+  unknownCount?: number
   status:
     | 'pending'
     | 'processing'
@@ -202,7 +218,10 @@ export interface SmsBatch {
     | 'failed'
     | 'unknown'
   error?: string
+  /** When the batch reached its current final status. Absent while processing. */
   completedAt?: string
+  /** When the status and counts were last calculated. */
+  statusCheckedAt?: string
   createdAt?: string
   updatedAt?: string
 }
