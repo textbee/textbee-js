@@ -8,6 +8,8 @@ Official JavaScript SDK for [textbee.dev](https://textbee.dev), the open source 
 
 Zero dependencies, TypeScript types included, works in Node 18+, Bun, Deno, Cloudflare Workers, and Vercel Edge.
 
+Writing Python? Use the official [Python SDK](https://github.com/textbee/textbee-python): `pip install textbee`.
+
 ## Install
 
 ```bash
