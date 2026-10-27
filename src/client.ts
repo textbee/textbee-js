@@ -7,6 +7,7 @@ import type {
   MessageList,
   SendSmsRequest,
   SendSmsResponse,
+  Sms,
   SmsBatchResult,
   TextbeeOptions,
 } from './types'
@@ -31,7 +32,7 @@ export class Textbee {
     }
 
     this.#apiKey = options.apiKey
-    this.#baseUrl = (options.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '')
+    this.#baseUrl = normalizeBaseUrl(options.baseUrl)
   }
 
   /** Send an SMS to one or more recipients. */
@@ -117,9 +118,10 @@ export class Textbee {
 
   /**
    * Iterate every message matching the filters, following the pagination
-   * cursor until the end. Use `order: 'asc'` with a `from` bound to drain
-   * forward when polling; keep the last message's `createdAt` (or track
-   * `meta.nextCursor` via `getMessages`) to resume the next poll.
+   * cursor until the end. `limit` is the page size, not a cap on the total.
+   * Use `order: 'asc'` with a `from` bound to drain forward when polling.
+   * `from` is inclusive, so a poll that resumes from the last `createdAt` sees
+   * that message again; skip ids you have already handled.
    *
    * ```ts
    * for await (const message of textbee.iterateMessages({ direction: 'received' })) {
@@ -140,15 +142,19 @@ export class Textbee {
   }
 
   /** Fetch a single message, including its delivery status. */
-  async getSms(deviceId: string, smsId: string): Promise<Message> {
-    const payload = await this.#request<{ data: Message }>(
+  async getSms(deviceId: string, smsId: string): Promise<Sms> {
+    const payload = await this.#request<{ data: Sms }>(
       'GET',
       `/gateway/devices/${encodeURIComponent(deviceId)}/sms/${encodeURIComponent(smsId)}`,
     )
     return payload.data
   }
 
-  /** Fetch a batch and every message in it. Pair this with `smsBatchId` from a send. */
+  /**
+   * Fetch a batch and every message in it, by the `smsBatchId` a send returns.
+   * Needs the id of the device that sent the batch. When textbee picked the
+   * device, use `getMessages({ smsBatchId })` instead.
+   */
   async getSmsBatch(
     deviceId: string,
     smsBatchId: string,
@@ -198,6 +204,66 @@ export class Textbee {
   }
 }
 
+/**
+ * Resolve the API root from a base URL. A bare origin gets /api/v1, a path
+ * containing /api/v1 is cut there, and any other path is kept as given for
+ * proxies that map a prefix onto the API. Bad values throw rather than falling
+ * back, so a typo never sends a self-hoster's key to the public API.
+ */
+function normalizeBaseUrl(raw: string | undefined): string {
+  const value = raw?.trim()
+  if (!value) {
+    return DEFAULT_BASE_URL
+  }
+
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(value)
+    ? value
+    : `https://${value}`
+
+  let url: URL
+  try {
+    url = new URL(withScheme)
+  } catch {
+    throw new TypeError(
+      'baseUrl is not a valid URL. Use your textbee api, ' +
+        'for example https://sms.example.com. The /api/v1 suffix is added for you.',
+    )
+  }
+
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new TypeError(`baseUrl must be http or https, got "${url.protocol}"`)
+  }
+  // textbee never uses basic auth, and https://api.textbee.dev@evil.com reads
+  // like textbee while sending the key to evil.com.
+  if (url.username || url.password) {
+    throw new TypeError('baseUrl must not contain a username or password')
+  }
+
+  const segments = url.pathname.split('/').filter(Boolean)
+  let cut = -1
+  for (let i = segments.length - 2; i >= 0; i--) {
+    if (
+      segments[i]!.toLowerCase() === 'api' &&
+      segments[i + 1]!.toLowerCase() === 'v1'
+    ) {
+      cut = i + 2
+      break
+    }
+  }
+
+  let path: string[]
+  if (segments.length === 0) {
+    path = ['api', 'v1']
+  } else if (cut === -1) {
+    path = segments
+  } else {
+    // Anything after /api/v1 is a route, not part of the root, so it is dropped.
+    path = [...segments.slice(0, cut - 2), 'api', 'v1']
+  }
+
+  return [url.origin, ...path].join('/')
+}
+
 function toIsoString(value: string | Date | undefined): string | undefined {
   return value instanceof Date ? value.toISOString() : value
 }
@@ -218,11 +284,21 @@ async function readBody(response: Response): Promise<unknown> {
 function errorMessage(payload: unknown, status: number): string {
   if (payload && typeof payload === 'object') {
     const record = payload as Record<string, unknown>
-    if (typeof record.error === 'string' && record.error) {
-      return record.error
-    }
-    if (typeof record.message === 'string' && record.message) {
-      return record.message
+    // Framework errors ({ statusCode, message, error }) carry the detail in
+    // message, and error is only the reason phrase such as "Not Found".
+    const keys = 'statusCode' in record ? ['message', 'error'] : ['error', 'message']
+    for (const key of keys) {
+      const value = record[key]
+      if (typeof value === 'string' && value) {
+        return value
+      }
+      if (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        value.every((item) => typeof item === 'string')
+      ) {
+        return value.join('; ')
+      }
     }
   }
 

@@ -2,7 +2,15 @@ export interface TextbeeOptions {
   /** API key from the textbee dashboard. Sent as the `x-api-key` header. */
   apiKey: string
 
-  /** Override the API base URL. Defaults to `https://api.textbee.dev/api/v1`. */
+  /**
+   * Your self-hosted textbee API. Defaults to `https://api.textbee.dev/api/v1`.
+   *
+   * A bare origin such as `https://sms.example.com` gets `/api/v1` added. A URL
+   * that contains `/api/v1` is cut there, so a pasted endpoint URL still works.
+   * Any other path is used as given, for proxies that map a prefix onto the API.
+   * A value with no scheme gets `https://`. An invalid URL throws a `TypeError`
+   * rather than falling back, so a typo never sends your key to the public API.
+   */
   baseUrl?: string
 }
 
@@ -39,9 +47,15 @@ export interface SendSmsRequest {
   /**
    * Send later instead of now, as an ISO 8601 string or a `Date`.
    *
-   * Must be in the future, and up to 72 hours ahead. Omit for an immediate send.
+   * Must be in the future. Omit for an immediate send.
    */
   scheduledAt?: string | Date
+}
+
+/** A reason the send will probably fail, such as `SMS_PERMISSION_MISSING`. */
+export interface SendSmsWarning {
+  code: string
+  message: string
 }
 
 /** Returned when the message was accepted for delivery and queued. */
@@ -50,11 +64,18 @@ export interface SendSmsQueuedResponse {
   message: string
   smsBatchId: string
   recipientCount: number
+  /** When a large send, spread over several waves, should finish. */
+  estimatedCompletionAt?: string
+  /** Present when the phone last reported a problem, such as the SMS permission off. */
+  warning?: SendSmsWarning
 }
 
 /** Returned when the message was dispatched to the device immediately. */
 export interface SendSmsImmediateResponse {
   successCount: number
+  failureCount?: number
+  /** Present when the phone last reported a problem, such as the SMS permission off. */
+  warning?: SendSmsWarning
   [key: string]: unknown
 }
 
@@ -140,6 +161,7 @@ export interface Device {
 
 export interface MessageDevice {
   _id: string
+  name?: string
   brand?: string
   model?: string
   buildId?: string
@@ -160,7 +182,7 @@ export interface Message {
   direction?: 'sent' | 'received'
   /** Message channel. Currently always `sms`; absent means `sms`. */
   channel?: string
-  /** The sending or receiving device, populated by the history endpoints. */
+  /** The sending or receiving device. */
   device?: MessageDevice
   /** Lowercase, and absent on messages stored before status tracking. */
   status?:
@@ -241,6 +263,15 @@ export interface MessageListMeta {
   hasMore?: boolean
 }
 
+/**
+ * A message as `getSms` and `getSmsBatch` return it: `device` is the id
+ * string, and `direction` is absent (read `type`).
+ */
+export interface Sms extends Omit<Message, 'device' | 'direction'> {
+  /** The id of the sending or receiving device. */
+  device?: string
+}
+
 export interface MessageList {
   data: Message[]
   meta: MessageListMeta
@@ -248,7 +279,7 @@ export interface MessageList {
 
 export interface SmsBatchResult {
   batch: SmsBatch
-  messages: Message[]
+  messages: Sms[]
 }
 
 /** Event names textbee sends in a webhook payload. */
