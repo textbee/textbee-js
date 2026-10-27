@@ -7,6 +7,7 @@ import type {
   MessageList,
   SendSmsRequest,
   SendSmsResponse,
+  Sms,
   SmsBatchResult,
   TextbeeOptions,
 } from './types'
@@ -141,8 +142,8 @@ export class Textbee {
   }
 
   /** Fetch a single message, including its delivery status. */
-  async getSms(deviceId: string, smsId: string): Promise<Message> {
-    const payload = await this.#request<{ data: Message }>(
+  async getSms(deviceId: string, smsId: string): Promise<Sms> {
+    const payload = await this.#request<{ data: Sms }>(
       'GET',
       `/gateway/devices/${encodeURIComponent(deviceId)}/sms/${encodeURIComponent(smsId)}`,
     )
@@ -224,7 +225,7 @@ function normalizeBaseUrl(raw: string | undefined): string {
     url = new URL(withScheme)
   } catch {
     throw new TypeError(
-      `baseUrl is not a valid URL: ${JSON.stringify(value)}. Use your textbee api, ` +
+      'baseUrl is not a valid URL. Use your textbee api, ' +
         'for example https://sms.example.com. The /api/v1 suffix is added for you.',
     )
   }

@@ -407,6 +407,12 @@ describe('options', () => {
     },
   )
 
+  it('keeps credentials in an invalid baseUrl out of the error', () => {
+    expect(() => client({ baseUrl: 'https://user:secret@sms.example.com:99999' })).toThrow(
+      /^(?!.*secret)/s,
+    )
+  })
+
   it('rejects a missing apiKey', () => {
     expect(() => new Textbee({ apiKey: '' })).toThrow(TypeError)
     // @ts-expect-error exercising the runtime guard for untyped callers

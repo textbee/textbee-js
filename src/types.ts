@@ -178,18 +178,12 @@ export interface Message {
    * `direction` filter, so a response value feeds straight back into a query.
    */
   type: 'SENT' | 'RECEIVED'
-  /**
-   * Direction, lowercase. Matches the `direction` filter values. Set by
-   * `getMessages` only; read `type` on other endpoints.
-   */
+  /** Direction, lowercase. Matches the `direction` filter values. */
   direction?: 'sent' | 'received'
   /** Message channel. Currently always `sms`; absent means `sms`. */
   channel?: string
-  /**
-   * The sending or receiving device. `getMessages` returns it as a
-   * `MessageDevice`; `getSms` and `getSmsBatch` return its id string.
-   */
-  device?: MessageDevice | string
+  /** The sending or receiving device. */
+  device?: MessageDevice
   /** Lowercase, and absent on messages stored before status tracking. */
   status?:
     | 'pending'
@@ -269,6 +263,15 @@ export interface MessageListMeta {
   hasMore?: boolean
 }
 
+/**
+ * A message as `getSms` and `getSmsBatch` return it: `device` is the id
+ * string, and `direction` is absent (read `type`).
+ */
+export interface Sms extends Omit<Message, 'device' | 'direction'> {
+  /** The id of the sending or receiving device. */
+  device?: string
+}
+
 export interface MessageList {
   data: Message[]
   meta: MessageListMeta
@@ -276,7 +279,7 @@ export interface MessageList {
 
 export interface SmsBatchResult {
   batch: SmsBatch
-  messages: Message[]
+  messages: Sms[]
 }
 
 /** Event names textbee sends in a webhook payload. */

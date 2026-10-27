@@ -108,7 +108,7 @@ const sms = await textbee.getSms(deviceId, smsId)
 const { batch, messages } = await textbee.getSmsBatch(deviceId, smsBatchId)
 ```
 
-On messages from `getMessages`, `device` is an object with the phone's name and model. On messages from `getSms` and `getSmsBatch`, it is the device id string, and `direction` is absent (read `type`).
+`getSms` and `getSmsBatch` return the `Sms` type. It differs from the `Message` that `getMessages` returns: `device` is the device id string, not an object with the phone's name and model, and `direction` is absent (read `type`).
 
 `batch.status` and the batch counts come from the messages in the batch, so they change as each message reports. `successCount` counts messages sent or delivered, and `failureCount` counts failed ones. `pendingCount`, `dispatchedCount`, `sentCount`, `deliveredCount` and `unknownCount` break the rest down by state.
 
