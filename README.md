@@ -41,7 +41,7 @@ await textbee.sendSms({
 | --- | --- | --- |
 | `deviceId` | `string` | Which phone sends the message. Omit it and textbee uses your default device, or the enabled device with the most recent heartbeat. |
 | `simSubscriptionId` | `number` | Which SIM sends the message on a multi-SIM phone. Omit it and the phone uses its configured preferred SIM, or the system default. |
-| `scheduledAt` | `string \| Date` | Send later instead of now. ISO 8601 or a `Date`, must be in the future, up to 72 hours ahead. |
+| `scheduledAt` | `string \| Date` | Send later instead of now. ISO 8601 or a `Date`, must be in the future. |
 
 ```js
 await textbee.sendSms({
@@ -76,9 +76,9 @@ History is account-level: one call covers every device, and `deviceIds` narrows 
 ```js
 // Paginated history across the whole account, filterable and searchable
 const { data, meta } = await textbee.getMessages({
-  direction: 'received', // 'all' | 'sent' | 'received'
+  direction: 'sent', // 'all' | 'sent' | 'received'
   deviceIds: [deviceId], // omit for every device
-  status: 'delivered', // delivery state; direction=sent + status=failed lists failed sends
+  status: 'delivered', // delivery state; status=failed lists failed sends
   search: 'invoice',
   from: '2026-08-01', // dates are UTC; datetimes need an explicit timezone
   to: '2026-09-01T00:00:00Z', // exclusive, so windows never double-count
@@ -87,7 +87,7 @@ const { data, meta } = await textbee.getMessages({
 })
 
 // direction on each message is lowercase and feeds straight back into filters
-data.filter((m) => m.direction === 'received')
+data.filter((m) => m.direction === 'sent')
 
 // Which recipients of a bulk send failed: filter by the batch a send returned
 const { smsBatchId } = await textbee.sendSms({ recipients, message })
@@ -102,9 +102,13 @@ for await (const message of textbee.iterateMessages({ direction: 'received', ord
 // A single message and its current status
 const sms = await textbee.getSms(deviceId, smsId)
 
-// A whole batch, using the smsBatchId returned by sendSms
+// A whole batch, using the smsBatchId returned by sendSms. This needs the id
+// of the device that sent it; when textbee picked the device, use
+// getMessages({ smsBatchId }) instead.
 const { batch, messages } = await textbee.getSmsBatch(deviceId, smsBatchId)
 ```
+
+On messages from `getMessages`, `device` is an object with the phone's name and model. On messages from `getSms` and `getSmsBatch`, it is the device id string, and `direction` is absent (read `type`).
 
 `batch.status` and the batch counts come from the messages in the batch, so they change as each message reports. `successCount` counts messages sent or delivered, and `failureCount` counts failed ones. `pendingCount`, `dispatchedCount`, `sentCount`, `deliveredCount` and `unknownCount` break the rest down by state.
 
@@ -211,9 +215,21 @@ try {
 ```js
 new Textbee({
   apiKey: 'your-api-key',
-  baseUrl: 'https://api.textbee.dev/api/v1', // override for self-hosted instances
+  baseUrl: 'https://api.textbee.dev/api/v1', // the default
 })
 ```
+
+### Self-hosted textbee
+
+Point `baseUrl` at your own instance. The `/api/v1` suffix is optional, so all of these reach the same API:
+
+```js
+new Textbee({ apiKey, baseUrl: 'https://sms.example.com' })
+new Textbee({ apiKey, baseUrl: 'https://sms.example.com/api/v1' })
+new Textbee({ apiKey, baseUrl: 'http://localhost:3001' })
+```
+
+If the API sits under a path prefix, give the full path, for example `https://example.com/textbee/api/v1`. Any path other than `/api/v1` is used as given, so a proxy that maps `/sms` onto the API keeps working with `https://example.com/sms`. A value with no scheme gets `https://`. An invalid URL, or one with a username or password, throws a `TypeError` instead of falling back to the hosted API, so a typo never sends your key to textbee.dev.
 
 ## What is not covered yet
 

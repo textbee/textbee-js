@@ -29,6 +29,7 @@ export type {
   SendSmsQueuedResponse,
   SendSmsRequest,
   SendSmsResponse,
+  SendSmsWarning,
   SmsBatch,
   SmsBatchResult,
   TextbeeOptions,

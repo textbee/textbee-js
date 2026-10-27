@@ -161,6 +161,31 @@ describe('errors', () => {
     expect((error as TextbeeError).body).toEqual({ error: 'Unauthorized' })
   })
 
+  it('prefers message over the reason phrase in framework errors', async () => {
+    fetchMock.mockImplementation(async () =>
+      respond(404, {
+        statusCode: 404,
+        message: 'Cannot GET /sms/gateway/devices',
+        error: 'Not Found',
+      }),
+    )
+    await expect(client().getDevices()).rejects.toMatchObject({
+      status: 404,
+      message: 'Cannot GET /sms/gateway/devices',
+    })
+
+    fetchMock.mockImplementation(async () =>
+      respond(400, {
+        statusCode: 400,
+        message: ['recipients must be an array', 'message should not be empty'],
+        error: 'Bad Request',
+      }),
+    )
+    await expect(client().getDevices()).rejects.toMatchObject({
+      message: 'recipients must be an array; message should not be empty',
+    })
+  })
+
   it('falls back to the status when the body carries no error text', async () => {
     fetchMock.mockImplementation(
       async () => new Response('<html>gateway</html>', { status: 502 }),
@@ -333,6 +358,54 @@ describe('options', () => {
 
     expect(lastCall().url).toBe('http://localhost:3001/api/v1/gateway/devices')
   })
+
+  // Same cases as textbee-mcp's normalizeBaseUrl, so all clients agree.
+  it.each([
+    [undefined, 'https://api.textbee.dev/api/v1'],
+    ['', 'https://api.textbee.dev/api/v1'],
+    ['  ', 'https://api.textbee.dev/api/v1'],
+    ['https://sms.example.com', 'https://sms.example.com/api/v1'],
+    ['https://sms.example.com/', 'https://sms.example.com/api/v1'],
+    ['https://sms.example.com/api/v1', 'https://sms.example.com/api/v1'],
+    ['https://sms.example.com/api/v1/', 'https://sms.example.com/api/v1'],
+    ['https://sms.example.com/textbee/api/v1', 'https://sms.example.com/textbee/api/v1'],
+    // A prefix without /api/v1 is kept as given, for proxies that rewrite it.
+    ['https://sms.example.com/textbee', 'https://sms.example.com/textbee'],
+    ['https://example.com/sms/', 'https://example.com/sms'],
+    ['https://api.textbee.dev/api/v1/gateway/send-sms', 'https://api.textbee.dev/api/v1'],
+    ['api.textbee.dev', 'https://api.textbee.dev/api/v1'],
+    ['localhost:3001', 'https://localhost:3001/api/v1'],
+    ['http://localhost:3001', 'http://localhost:3001/api/v1'],
+    ['http://127.0.0.1:3001/api/v1', 'http://127.0.0.1:3001/api/v1'],
+    ['http://[::1]:3001', 'http://[::1]:3001/api/v1'],
+    ['http://sms.example.com', 'http://sms.example.com/api/v1'],
+    ['https://sms.example.com/API/V1', 'https://sms.example.com/api/v1'],
+    ['https://sms.example.com/v1', 'https://sms.example.com/v1'],
+    ['https://example.com/my app/api/v1', 'https://example.com/my%20app/api/v1'],
+    ['https://b\u00fccher.example', 'https://xn--bcher-kva.example/api/v1'],
+    ['HTTPS://SMS.Example.com:443/?q=1#top', 'https://sms.example.com/api/v1'],
+  ])('normalizes baseUrl %j to %j', async (baseUrl, expected) => {
+    fetchMock.mockImplementation(async () => respond(200, { data: [] }))
+
+    await client({ baseUrl }).getDevices()
+
+    expect(lastCall().url).toBe(`${expected}/gateway/devices`)
+  })
+
+  it.each([
+    'not a url',
+    'ftp://sms.example.com',
+    'https://',
+    'https://sms.example.com:99999',
+    'https://user:pass@sms.example.com',
+    'https://api.textbee.dev@evil.example',
+  ])(
+    'rejects baseUrl %j instead of falling back to the public api',
+    (baseUrl) => {
+      expect(() => client({ baseUrl })).toThrow(TypeError)
+      expect(() => client({ baseUrl })).not.toThrow(/api\.textbee\.dev/)
+    },
+  )
 
   it('rejects a missing apiKey', () => {
     expect(() => new Textbee({ apiKey: '' })).toThrow(TypeError)
