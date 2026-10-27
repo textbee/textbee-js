@@ -369,9 +369,9 @@ describe('options', () => {
     ['https://sms.example.com/api/v1', 'https://sms.example.com/api/v1'],
     ['https://sms.example.com/api/v1/', 'https://sms.example.com/api/v1'],
     ['https://sms.example.com/textbee/api/v1', 'https://sms.example.com/textbee/api/v1'],
-    // A prefix without /api/v1 is kept as given, for proxies that rewrite it.
-    ['https://sms.example.com/textbee', 'https://sms.example.com/textbee'],
-    ['https://example.com/sms/', 'https://example.com/sms'],
+    // A subpath deployment gets /api/v1 added after its prefix.
+    ['https://sms.example.com/textbee', 'https://sms.example.com/textbee/api/v1'],
+    ['https://example.com/sms/', 'https://example.com/sms/api/v1'],
     ['https://api.textbee.dev/api/v1/gateway/send-sms', 'https://api.textbee.dev/api/v1'],
     ['api.textbee.dev', 'https://api.textbee.dev/api/v1'],
     ['localhost:3001', 'https://localhost:3001/api/v1'],
@@ -380,7 +380,7 @@ describe('options', () => {
     ['http://[::1]:3001', 'http://[::1]:3001/api/v1'],
     ['http://sms.example.com', 'http://sms.example.com/api/v1'],
     ['https://sms.example.com/API/V1', 'https://sms.example.com/api/v1'],
-    ['https://sms.example.com/v1', 'https://sms.example.com/v1'],
+    ['https://sms.example.com/v1', 'https://sms.example.com/v1/api/v1'],
     ['https://example.com/my app/api/v1', 'https://example.com/my%20app/api/v1'],
     ['https://b\u00fccher.example', 'https://xn--bcher-kva.example/api/v1'],
     ['HTTPS://SMS.Example.com:443/?q=1#top', 'https://sms.example.com/api/v1'],

@@ -231,7 +231,7 @@ new Textbee({ apiKey, baseUrl: 'https://sms.example.com/api/v1' })
 new Textbee({ apiKey, baseUrl: 'http://localhost:3001' })
 ```
 
-If the API sits under a path prefix, give the full path, for example `https://example.com/textbee/api/v1`. Any path other than `/api/v1` is used as given, so a proxy that maps `/sms` onto the API keeps working with `https://example.com/sms`. A value with no scheme gets `https://`. An invalid URL, or one with a username or password, throws a `TypeError` instead of falling back to the hosted API, so a typo never sends your key to textbee.dev.
+If the API sits under a path prefix, give the prefix: `https://example.com/textbee` reaches `https://example.com/textbee/api/v1`. The SDK adds `/api/v1` unless the path already contains it, the same rule the textbee MCP server uses for `TEXTBEE_BASE_URL`. A value with no scheme gets `https://`. An invalid URL, or one with a username or password, throws a `TypeError` instead of falling back to the hosted API, so a typo never sends your key to textbee.dev.
 
 ## What is not covered yet
 

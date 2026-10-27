@@ -252,10 +252,8 @@ function normalizeBaseUrl(raw: string | undefined): string {
   }
 
   let path: string[]
-  if (segments.length === 0) {
-    path = ['api', 'v1']
-  } else if (cut === -1) {
-    path = segments
+  if (cut === -1) {
+    path = [...segments, 'api', 'v1']
   } else {
     // Anything after /api/v1 is a route, not part of the root, so it is dropped.
     path = [...segments.slice(0, cut - 2), 'api', 'v1']

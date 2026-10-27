@@ -5,9 +5,9 @@ export interface TextbeeOptions {
   /**
    * Your self-hosted textbee API. Defaults to `https://api.textbee.dev/api/v1`.
    *
-   * A bare origin such as `https://sms.example.com` gets `/api/v1` added. A URL
+   * `/api/v1` is added unless the path already contains it, so
+   * `https://sms.example.com` and `https://example.com/textbee` both work. A URL
    * that contains `/api/v1` is cut there, so a pasted endpoint URL still works.
-   * Any other path is used as given, for proxies that map a prefix onto the API.
    * A value with no scheme gets `https://`. An invalid URL throws a `TypeError`
    * rather than falling back, so a typo never sends your key to the public API.
    */
