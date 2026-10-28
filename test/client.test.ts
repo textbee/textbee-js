@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Textbee, TextbeeError } from '../src/index'
-import type { MessageErrorEntry } from '../src/index'
+import type { MessageIssueEntry } from '../src/index'
 
 const pkg = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
@@ -253,8 +253,8 @@ describe('response envelopes', () => {
     expect(url.searchParams.get('type')).toBeNull()
   })
 
-  it('types errorHistory on a message that failed and later succeeded', async () => {
-    const entry: MessageErrorEntry = {
+  it('types issueHistory on a message that failed and later succeeded', async () => {
+    const entry: MessageIssueEntry = {
       code: 'FCM_SEND_FAILED',
       message: 'push failed',
       at: '2026-10-01T10:00:00.000Z',
@@ -262,14 +262,14 @@ describe('response envelopes', () => {
       backfilled: true,
     }
     const page = {
-      data: [{ _id: 'sms-2', message: 'hi', type: 'SENT', status: 'sent', errorHistory: [entry] }],
+      data: [{ _id: 'sms-2', message: 'hi', type: 'SENT', status: 'sent', issueHistory: [entry] }],
       meta: {},
     }
     fetchMock.mockImplementation(async () => respond(200, page))
 
     const result = await client().getMessages()
 
-    expect(result.data[0]?.errorHistory).toEqual([entry])
+    expect(result.data[0]?.issueHistory).toEqual([entry])
   })
 
   it('sends no query at all for a bare account-level getMessages()', async () => {
