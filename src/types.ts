@@ -216,7 +216,7 @@ export interface Message {
   /** When the message failed. Present only while status is `failed`. */
   failedAt?: string
   receivedAt?: string
-  /** Current failure code. Present only while status is `failed`. */
+  /** Current failure code. Present only while status is `failed` (test accounts can keep `FCM_SEND_SKIPPED`). */
   errorCode?: string
   /** Current failure text. Present only while status is `failed`, or as a timeout note on `unknown`. */
   errorMessage?: string
