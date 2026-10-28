@@ -220,7 +220,7 @@ export interface Message {
   errorCode?: string
   /** Current failure text. Present only while status is `failed`, or as a timeout note on `unknown`. */
   errorMessage?: string
-  /** Every failure the message had, oldest first, at most 5. */
+  /** Every failure the message had, oldest first, at most 10. */
   errorHistory?: MessageErrorEntry[]
   simSubscriptionId?: number
   smsBatch?: string
