@@ -269,8 +269,8 @@ describe('response envelopes', () => {
 
     const result = await client().getMessages()
 
-    expect(result.data[0].errorHistory).toEqual([entry])
-    expect(result.data[0].errorCode).toBeUndefined()
+    expect(result.data[0]?.errorHistory).toEqual([entry])
+    expect(result.data[0]?.errorCode).toBeUndefined()
   })
 
   it('sends no query at all for a bare account-level getMessages()', async () => {
