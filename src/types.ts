@@ -168,6 +168,22 @@ export interface MessageDevice {
   enabled?: boolean
 }
 
+/** Where a failure was reported from. */
+export type MessageIssueSource = 'push' | 'device' | 'server'
+
+/** One failure a message had. Kept after the message later succeeds. */
+export interface MessageIssueEntry {
+  code: string
+  message?: string
+  /** When the failure happened. ISO date. */
+  at: string
+  source: MessageIssueSource
+  /** Set on entries rebuilt from old message fields. */
+  backfilled?: boolean
+  /** True when the entry is a delivery report that did not confirm delivery. The message was sent; this is not a send failure. */
+  deliveryReport?: boolean
+}
+
 export interface Message {
   _id: string
   message: string
@@ -199,10 +215,15 @@ export interface Message {
   dispatchedAt?: string
   sentAt?: string
   deliveredAt?: string
+  /** When the message failed. Present only while status is `failed`. */
   failedAt?: string
   receivedAt?: string
+  /** Current failure code. Present only while status is `failed` (test accounts can keep `FCM_SEND_SKIPPED`). */
   errorCode?: string
+  /** Current failure text. Present only while status is `failed`, or as a timeout note on `unknown`. */
   errorMessage?: string
+  /** Every failure the message had, plus delivery reports that did not confirm delivery (`deliveryReport: true`, not failures). Oldest first. At most 15: the first 5 and the newest 10. */
+  issueHistory?: MessageIssueEntry[]
   simSubscriptionId?: number
   smsBatch?: string
   createdAt?: string

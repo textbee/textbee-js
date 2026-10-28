@@ -23,6 +23,8 @@ export type {
   ListMessagesOptions,
   Message,
   MessageDevice,
+  MessageIssueEntry,
+  MessageIssueSource,
   MessageList,
   MessageListMeta,
   SendSmsImmediateResponse,
