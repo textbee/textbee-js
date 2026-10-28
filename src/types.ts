@@ -168,6 +168,20 @@ export interface MessageDevice {
   enabled?: boolean
 }
 
+/** Where a failure was reported from. */
+export type MessageErrorSource = 'push' | 'device' | 'server'
+
+/** One failure a message had. Kept after the message later succeeds. */
+export interface MessageErrorEntry {
+  code: string
+  message?: string
+  /** When the failure happened. ISO date. */
+  at: string
+  source: MessageErrorSource
+  /** Set on entries rebuilt from old message fields. */
+  backfilled?: boolean
+}
+
 export interface Message {
   _id: string
   message: string
@@ -199,10 +213,15 @@ export interface Message {
   dispatchedAt?: string
   sentAt?: string
   deliveredAt?: string
+  /** When the message failed. Present only while status is `failed`. */
   failedAt?: string
   receivedAt?: string
+  /** Current failure code. Present only while status is `failed`. */
   errorCode?: string
+  /** Current failure text. Present only while status is `failed`, or as a timeout note on `unknown`. */
   errorMessage?: string
+  /** Every failure the message had, oldest first, at most 5. */
+  errorHistory?: MessageErrorEntry[]
   simSubscriptionId?: number
   smsBatch?: string
   createdAt?: string
