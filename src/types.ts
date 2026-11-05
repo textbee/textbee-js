@@ -18,7 +18,12 @@ export interface SendSmsRequest {
   /** The message body. */
   message: string
 
-  /** Phone numbers to send to, in international format. */
+  /**
+   * Phone numbers or short codes. International format (`+12025550123`)
+   * reaches any country. Local numbers reach recipients in the sending SIM's
+   * country. Short codes work only in that country, and some only on one
+   * carrier. Values with letters are rejected with 400.
+   */
   recipients: string[]
 
   /**
