@@ -8,7 +8,11 @@ export {
   normalizePhoneNumber,
   sanitizeForGsm7,
 } from './sms-utils'
-export { verifyWebhookSignature } from './webhooks'
+export {
+  verifyTimestampedWebhookSignature,
+  verifyWebhookRequest,
+  verifyWebhookSignature,
+} from './webhooks'
 
 export type {
   NormalizePhoneNumberOptions,
@@ -16,7 +20,12 @@ export type {
   SmsEncoding,
   SmsSegmentInfo,
 } from './sms-utils'
-export type { VerifyWebhookSignatureOptions } from './webhooks'
+export type {
+  VerifyTimestampedWebhookSignatureOptions,
+  VerifyWebhookRequestOptions,
+  VerifyWebhookSignatureOptions,
+  WebhookRequestHeaders,
+} from './webhooks'
 export type {
   Device,
   IterateMessagesOptions,

@@ -116,24 +116,49 @@ const { batch, messages } = await textbee.getSmsBatch(deviceId, smsBatchId)
 
 ## Verifying webhooks
 
-textbee signs each webhook delivery with HMAC-SHA256 and sends the hex digest in the `X-Signature` header. Pass the raw request body, not a re-serialized object, whenever your framework gives you access to it.
+textbee signs each webhook delivery with your signing secret and sends a timestamped signature in the `X-Textbee-Signature` header:
+
+```
+X-Textbee-Signature: t=1762300000,v1=5f2b...
+```
+
+`v1` is the hex HMAC-SHA256 of `<t>.<raw body>`. `verifyWebhookRequest` reads the signature header, checks `v1` against the raw body in constant time, and rejects the request when `t` is more than 300 seconds from now. The signed timestamp makes a captured delivery useless after that window.
+
+Verify the raw body exactly as received. A parsed and re-serialized body can differ by one byte and fail.
 
 ```js
-import { verifyWebhookSignature } from '@textbee/sdk'
+import express from 'express'
+import { verifyWebhookRequest } from '@textbee/sdk'
+
+const app = express()
 
 app.post('/webhooks/textbee', express.raw({ type: 'application/json' }), async (req, res) => {
-  const valid = await verifyWebhookSignature({
-    payload: req.body.toString('utf8'),
-    signature: req.get('x-signature'),
+  const valid = await verifyWebhookRequest({
+    payload: req.body, // a Buffer, from express.raw
+    headers: req.headers,
     signingSecret: process.env.TEXTBEE_WEBHOOK_SECRET,
   })
 
   if (!valid) return res.sendStatus(401)
 
   const event = JSON.parse(req.body.toString('utf8'))
+  // Retries carry the same idempotencyKey. Skip keys you have already handled.
   res.sendStatus(200)
 })
 ```
+
+`payload` takes a string or bytes (`Buffer`, `Uint8Array`). `headers` takes Node's `req.headers`, a plain object, or a Fetch `Headers` object, and header names match in any case.
+
+Options:
+
+- `toleranceSeconds`: the largest allowed distance between `t` and now, in either direction. Defaults to `300`. Keep your server clock in sync (NTP).
+- `allowLegacy`: an explicit opt-in for old receivers. Off by default. When it is `true` and the signature header is absent, the request is checked against `X-Signature` instead, which has no replay protection.
+
+To check the signature header value yourself, call `verifyTimestampedWebhookSignature({ payload, signatureHeader, signingSecret })`. It takes the same `toleranceSeconds` option.
+
+Retries and duplicates: a failed delivery is retried with a fresh `t`, so each attempt passes the freshness check. Every payload carries an `idempotencyKey`. Store the keys you have processed and skip repeats.
+
+**Deprecated:** `verifyWebhookSignature` checks only `X-Signature`. It still works because textbee still sends that header, but it has no replay protection. See [textbee.dev/docs/webhooks](https://textbee.dev/docs/webhooks) for the upgrade steps.
 
 ## SMS utilities
 
