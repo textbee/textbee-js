@@ -110,7 +110,8 @@ export async function verifyTimestampedWebhookSignature(
     now = Math.floor(Date.now() / 1000),
   } = options
 
-  if (!signatureHeader || !signingSecret) {
+  const body = toBytes(payload)
+  if (!signatureHeader || !signingSecret || !body) {
     return false
   }
 
@@ -124,7 +125,6 @@ export async function verifyTimestampedWebhookSignature(
     return false
   }
 
-  const body = typeof payload === 'string' ? encoder.encode(payload) : payload
   const prefix = encoder.encode(`${parsed.timestamp}.`)
   const signed = new Uint8Array(prefix.length + body.length)
   signed.set(prefix)
@@ -170,11 +170,11 @@ export async function verifyWebhookRequest(
   }
 
   const legacySignature = getHeader(headers, 'x-signature')
-  if (!legacySignature || !signingSecret) {
+  const body = toBytes(payload)
+  if (!legacySignature || !signingSecret || !body) {
     return false
   }
 
-  const body = typeof payload === 'string' ? encoder.encode(payload) : payload
   const expected = await hmacSha256Hex(signingSecret, body)
 
   return constantTimeEqual(expected, legacySignature.toLowerCase())
@@ -217,13 +217,23 @@ function getHeader(headers: WebhookRequestHeaders, name: string): string | undef
     return (headers as { get(name: string): string | null }).get(name) ?? undefined
   }
 
+  // Every case variant counts, so a second copy of a header cannot hide behind the first.
+  const values: string[] = []
   for (const [key, value] of Object.entries(headers)) {
     if (key.toLowerCase() === name && value !== undefined) {
-      return Array.isArray(value) ? value.join(',') : value
+      values.push(...(Array.isArray(value) ? value : [value]))
     }
   }
 
-  return undefined
+  return values.length > 0 ? values.join(',') : undefined
+}
+
+function toBytes(payload: unknown): Uint8Array | undefined {
+  if (typeof payload === 'string') {
+    return encoder.encode(payload)
+  }
+  // A body parser that skipped the request can leave undefined or {} here.
+  return payload instanceof Uint8Array ? payload : undefined
 }
 
 async function hmacSha256Hex(secret: string, message: Uint8Array): Promise<string> {

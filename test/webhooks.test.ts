@@ -166,6 +166,18 @@ describe('verifyTimestampedWebhookSignature', () => {
     ).resolves.toBe(false)
   })
 
+  it('accepts a timestamp inside a custom tolerance above 300 seconds', async () => {
+    await expect(
+      verifyTimestampedWebhookSignature({
+        payload: rawBody,
+        signatureHeader: signTimestamped(rawBody),
+        signingSecret: SIGNING_SECRET,
+        toleranceSeconds: 600,
+        now: NOW + 301,
+      }),
+    ).resolves.toBe(true)
+  })
+
   it('rejects a timestamp re-signed under a different t', async () => {
     const v1 = signTimestamped(rawBody).split('v1=')[1]
     await expect(verify(`t=${NOW + 1},v1=${v1}`)).resolves.toBe(false)
@@ -311,6 +323,52 @@ describe('verifyWebhookRequest', () => {
         allowLegacy: true,
       }),
     ).resolves.toBe(false)
+  })
+
+  it('does not fall back when X-Textbee-Signature is empty', async () => {
+    await expect(
+      verifyWebhookRequest({
+        payload: rawBody,
+        headers: { 'x-textbee-signature': '', 'x-signature': legacySignature },
+        signingSecret: SIGNING_SECRET,
+        now: NOW,
+        allowLegacy: true,
+      }),
+    ).resolves.toBe(false)
+  })
+
+  it('reads every case variant of the signature header in a plain object', async () => {
+    const valid = signTimestamped(rawBody)
+    const v1 = valid.split('v1=')[1]
+    await expect(
+      verifyWebhookRequest({
+        payload: rawBody,
+        headers: { 'X-Textbee-Signature': valid, 'x-textbee-signature': `t=${NOW - 1000},v1=${v1}` },
+        signingSecret: SIGNING_SECRET,
+        now: NOW,
+      }),
+    ).resolves.toBe(false)
+  })
+
+  it('returns false instead of throwing when the body was not read', async () => {
+    for (const body of [undefined, {}]) {
+      await expect(
+        verifyWebhookRequest({
+          payload: body as unknown as string,
+          headers: { 'x-textbee-signature': signTimestamped(rawBody), 'x-signature': legacySignature },
+          signingSecret: SIGNING_SECRET,
+          now: NOW,
+        }),
+      ).resolves.toBe(false)
+      await expect(
+        verifyWebhookRequest({
+          payload: body as unknown as string,
+          headers: { 'x-signature': legacySignature },
+          signingSecret: SIGNING_SECRET,
+          allowLegacy: true,
+        }),
+      ).resolves.toBe(false)
+    }
   })
 
   it('rejects a request with no signature headers', async () => {
