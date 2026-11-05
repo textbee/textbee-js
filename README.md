@@ -180,7 +180,7 @@ It is best effort: characters with no safe equivalent pass through untouched. Ch
 
 ### Phone number helpers
 
-textbee does not require international format. Local numbers and short codes are sent as written and reach recipients in the same country as the sending SIM. International format works for every recipient, so use these helpers when you send to more than one country or match replies to stored numbers.
+textbee does not require international format. Local numbers are sent as written and reach recipients in the same country as the sending SIM. Short codes are sent as written too. They work only in the sending SIM's country, and some work only on one carrier. International format works for every recipient, so use these helpers when you send to more than one country or match replies to stored numbers.
 
 ```js
 import { isValidE164, normalizePhoneNumber } from '@textbee/sdk'
