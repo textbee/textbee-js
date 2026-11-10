@@ -45,6 +45,9 @@ export class Textbee {
     if (request.deviceId !== undefined) {
       body.deviceId = request.deviceId
     }
+    if (request.simSlotIndex !== undefined) {
+      body.simSlotIndex = request.simSlotIndex
+    }
     if (request.simSubscriptionId !== undefined) {
       body.simSubscriptionId = request.simSubscriptionId
     }
