@@ -37,15 +37,27 @@ export interface SendSmsRequest {
   deviceId?: string
 
   /**
-   * Which SIM sends the message on a multi-SIM phone.
+   * Which SIM sends the message, by its slot in the phone. `0` is SIM 1 and
+   * `1` is SIM 2. Works with or without `deviceId`.
    *
-   * This value is not validated. An id that does not match a SIM currently in
-   * the phone is ignored, and the message goes out from the SIM configured in
-   * the app's settings, or the system default. Nothing errors, so confirm the
-   * SIM by checking which number the message arrived from.
+   * If the slot has no active SIM, the message fails with the error code
+   * `SIM_SLOT_EMPTY`. It is never sent from another SIM. Omit it and the phone
+   * uses its default SIM.
    *
-   * Find the id in the textbee Android app under Dashboard, "SIM Cards", where
-   * each SIM shows its number with a copy button.
+   * The slot is the place in the phone, not a specific card: a different card
+   * in that slot sends from the new card. With textbee app versions before slot
+   * support, the server refuses a slot it cannot map from the phone's last SIM
+   * report with HTTP 400, so the call throws.
+   */
+  simSlotIndex?: number
+
+  /**
+   * Which SIM sends the message, by its Android subscription id.
+   *
+   * @deprecated Use `simSlotIndex`. Android changes this id when a SIM is
+   * reinserted, and a stale id sends from the default SIM with no error. It
+   * still works. If you send both, textbee uses `simSlotIndex` and ignores
+   * this value.
    */
   simSubscriptionId?: number
 
@@ -229,6 +241,8 @@ export interface Message {
   errorMessage?: string
   /** Every failure the message had, plus delivery reports that did not confirm delivery (`deliveryReport: true`, not failures). Oldest first. At most 15: the first 5 and the newest 10. */
   issueHistory?: MessageIssueEntry[]
+  /** The SIM slot the sender asked for. `0` is SIM 1, `1` is SIM 2. */
+  simSlotIndex?: number
   simSubscriptionId?: number
   smsBatch?: string
   createdAt?: string

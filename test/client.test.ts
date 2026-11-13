@@ -92,6 +92,43 @@ describe('sendSms', () => {
     }
   })
 
+  it('passes simSlotIndex through, including 0', async () => {
+    fetchMock.mockImplementation(async () => respond(200, { data: { successCount: 1 } }))
+
+    await client().sendSms({ message: 'a', recipients: ['+15555550123'], simSlotIndex: 0 })
+    expect(lastCall().body).toEqual({
+      message: 'a',
+      recipients: ['+15555550123'],
+      simSlotIndex: 0,
+    })
+
+    await client().sendSms({ message: 'b', recipients: ['+15555550123'], simSlotIndex: 1 })
+    expect(lastCall().body.simSlotIndex).toBe(1)
+  })
+
+  it('sends both simSlotIndex and simSubscriptionId when both are given', async () => {
+    fetchMock.mockImplementation(async () => respond(200, { data: { successCount: 1 } }))
+
+    await client().sendSms({
+      message: 'both',
+      recipients: ['+15555550123'],
+      simSlotIndex: 1,
+      simSubscriptionId: 2,
+    })
+
+    expect(lastCall().body).toMatchObject({ simSlotIndex: 1, simSubscriptionId: 2 })
+  })
+
+  it('omits simSlotIndex when neither SIM option is given', async () => {
+    fetchMock.mockImplementation(async () => respond(200, { data: { successCount: 1 } }))
+
+    await client().sendSms({ message: 'none', recipients: ['+15555550123'] })
+
+    const keys = Object.keys(lastCall().body)
+    expect(keys).not.toContain('simSlotIndex')
+    expect(keys).not.toContain('simSubscriptionId')
+  })
+
   it('passes optional fields through and omits them entirely when unset', async () => {
     fetchMock.mockImplementation(async () => respond(200, { data: { successCount: 1 } }))
 
@@ -113,6 +150,7 @@ describe('sendSms', () => {
 
     const keys = Object.keys(lastCall().body)
     expect(keys).not.toContain('deviceId')
+    expect(keys).not.toContain('simSlotIndex')
     expect(keys).not.toContain('simSubscriptionId')
     expect(keys).not.toContain('scheduledAt')
   })
