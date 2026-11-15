@@ -12,6 +12,14 @@ export interface TextbeeOptions {
    * rather than falling back, so a typo never sends your key to the public API.
    */
   baseUrl?: string
+
+  /**
+   * Name and version of an app or tool built on this SDK, for example
+   * `my-app/1.2.0`. It is sent ahead of the SDK's own name in the client
+   * headers. Each space-separated part must look like `name/version`, or the
+   * constructor throws a `TypeError`.
+   */
+  clientName?: string
 }
 
 export interface SendSmsRequest {
