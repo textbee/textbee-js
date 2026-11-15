@@ -250,8 +250,11 @@ try {
 new Textbee({
   apiKey: 'your-api-key',
   baseUrl: 'https://api.textbee.dev/api/v1', // the default
+  clientName: 'my-app/1.2.0', // optional
 })
 ```
+
+Set `clientName` when you publish a tool or integration built on this SDK. It names your tool in the request headers, ahead of the SDK's own name. Use `name/version`.
 
 ### Self-hosted textbee
 

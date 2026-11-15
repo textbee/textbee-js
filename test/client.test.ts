@@ -237,7 +237,7 @@ describe('errors', () => {
   })
 })
 
-describe('telemetry headers', () => {
+describe('client headers', () => {
   it('identifies the sdk and its version on every request', async () => {
     fetchMock.mockImplementation(async () => respond(200, { data: [] }))
 
@@ -247,6 +247,26 @@ describe('telemetry headers', () => {
     expect(lastCall().headers['user-agent']).toBe(expected)
     expect(lastCall().headers['x-sdk-client']).toBe(expected)
   })
+
+  it('puts a client name ahead of the sdk', async () => {
+    fetchMock.mockImplementation(async () => respond(200, { data: [] }))
+
+    await new Textbee({
+      apiKey: API_KEY,
+      clientName: ' my-tool/1.2.0  host/2.0.0-beta.1 ',
+    }).getDevices()
+
+    const expected = `my-tool/1.2.0 host/2.0.0-beta.1 textbee-js/${pkg.version}`
+    expect(lastCall().headers['user-agent']).toBe(expected)
+    expect(lastCall().headers['x-sdk-client']).toBe(expected)
+  })
+
+  it.each(['', 'my tool', 'my-tool', 'a/1 b/2 c/3 d/4 e/5', 'my-tool/1.0\nx: y'])(
+    'rejects the client name %j',
+    (clientName) => {
+      expect(() => new Textbee({ apiKey: API_KEY, clientName })).toThrow(TypeError)
+    },
+  )
 })
 
 describe('response envelopes', () => {

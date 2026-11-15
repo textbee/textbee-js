@@ -22,9 +22,12 @@ interface RequestInit {
   body?: unknown
 }
 
+const CLIENT_NAME_PART = /^[A-Za-z0-9._-]{1,64}\/[A-Za-z0-9._+-]{1,32}$/
+
 export class Textbee {
   readonly #apiKey: string
   readonly #baseUrl: string
+  readonly #clientId: string
 
   constructor(options: TextbeeOptions) {
     if (!options?.apiKey) {
@@ -33,6 +36,7 @@ export class Textbee {
 
     this.#apiKey = options.apiKey
     this.#baseUrl = normalizeBaseUrl(options.baseUrl)
+    this.#clientId = clientId(options.clientName)
   }
 
   /** Send an SMS to one or more recipients. */
@@ -183,8 +187,8 @@ export class Textbee {
 
     const headers: Record<string, string> = {
       'x-api-key': this.#apiKey,
-      'user-agent': CLIENT_ID,
-      'x-sdk-client': CLIENT_ID,
+      'user-agent': this.#clientId,
+      'x-sdk-client': this.#clientId,
       accept: 'application/json',
     }
     if (init.body !== undefined) {
@@ -304,4 +308,13 @@ function errorMessage(payload: unknown, status: number): string {
   }
 
   return `HTTP ${status}`
+}
+
+function clientId(clientName: string | undefined): string {
+  if (clientName === undefined) return CLIENT_ID
+  const parts = typeof clientName === 'string' ? clientName.trim().split(/\s+/) : []
+  if (parts.length === 0 || parts.length > 4 || !parts.every((part) => CLIENT_NAME_PART.test(part))) {
+    throw new TypeError('clientName must look like name/version, for example my-app/1.2.0')
+  }
+  return `${parts.join(' ')} ${CLIENT_ID}`
 }
